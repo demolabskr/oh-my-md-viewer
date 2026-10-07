@@ -9,7 +9,7 @@ const REPO_URL = 'https://github.com/demolabskr/oh-my-md-viewer';
 const MD_RE = /\.(md|markdown|mdown|mkd|mkdn|mdwn)$/i;
 const MAX_BYTES = 30 * 1024 * 1024;
 
-const DEFAULT_PREFS = { theme: 'system', toc: true, width: 'medium', zoom: 0, bounds: null, maximized: false, recent: [] };
+const DEFAULT_PREFS = { theme: 'system', toc: true, width: 'medium', zoom: 0, bounds: null, display: null, recent: [] };
 const THEMES = ['system', 'light', 'dark'];
 const WIDTHS = ['narrow', 'medium', 'wide', 'full'];
 
@@ -120,25 +120,52 @@ const focusedState = () => {
   return w ? states.get(w.webContents.id) : null;
 };
 
-function initialBounds() {
-  const b = prefs.bounds;
-  const opts = { width: (b && b.width) || 1100, height: (b && b.height) || 800 };
-  if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
-    const n = states.size * 28;
-    const x = b.x + n, y = b.y + n;
-    const visible = screen.getAllDisplays().some((d) => {
-      const a = d.workArea;
-      return x >= a.x - 50 && y >= a.y - 10 && x < a.x + a.width - 120 && y < a.y + a.height - 120;
-    });
-    if (visible) { opts.x = x; opts.y = y; }
+/* 창 위치: 항상 최대화로 열되, 마지막으로 있던 모니터에서 연다 (듀얼 모니터 대응) */
+const sameRect = (a, b) => a && b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+
+function targetDisplay() {
+  const all = screen.getAllDisplays();
+  const d = prefs.display;
+  if (d) {
+    const exact = all.find((x) => sameRect(x.bounds, d)); // 해상도·배치가 그대로인 모니터
+    if (exact) return exact;
   }
-  return opts;
+  const b = prefs.bounds;
+  if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
+    const near = screen.getDisplayMatching(b); // 모니터 구성이 바뀌었으면 가장 많이 겹치는 곳
+    const a = near.workArea;
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    if (cx >= a.x && cx < a.x + a.width && cy >= a.y && cy < a.y + a.height) return near;
+  }
+  return screen.getPrimaryDisplay(); // 저장된 모니터가 없어졌으면 주 모니터
+}
+
+// 최대화를 풀었을 때 돌아갈 일반 창 크기/위치 (대상 모니터 안으로 보정)
+function initialBounds(display) {
+  const a = display.workArea;
+  const b = prefs.bounds;
+  const width = Math.min((b && b.width) || 1100, a.width);
+  const height = Math.min((b && b.height) || 800, a.height);
+  const n = (states.size % 8) * 28;
+  let x = Math.round(a.x + (a.width - width) / 2) + n;
+  let y = Math.round(a.y + (a.height - height) / 2) + n;
+  if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
+    const bx = b.x + n, by = b.y + n;
+    if (bx >= a.x - 50 && by >= a.y - 10 && bx + 120 < a.x + a.width && by + 120 < a.y + a.height) { x = bx; y = by; }
+  }
+  return { x, y, width, height };
+}
+
+function rememberWindow(win) {
+  if (win.isDestroyed() || win.isMinimized() || win.isFullScreen()) return;
+  prefs.bounds = win.getNormalBounds(); // 최대화 상태여도 일반 크기를 돌려준다
+  prefs.display = screen.getDisplayMatching(win.getBounds()).bounds;
+  savePrefs();
 }
 
 function createWindow(file) {
-  const isFirst = states.size === 0;
   const win = new BrowserWindow({
-    ...initialBounds(),
+    ...initialBounds(targetDisplay()),
     minWidth: 420,
     minHeight: 320,
     show: false,
@@ -159,8 +186,12 @@ function createWindow(file) {
   states.set(wc.id, st);
   if (file) { addRecent(file); watch(st); }
 
-  if (isFirst && prefs.maximized) win.maximize();
+  // 숨긴 채로 대상 모니터에서 최대화해 두고, 첫 화면이 그려진 뒤에 보여준다 (깜빡임 없음)
+  win.maximize();
   win.once('ready-to-show', () => win.show());
+  let moveTimer = null;
+  const later = () => { clearTimeout(moveTimer); moveTimer = setTimeout(() => rememberWindow(win), 400); };
+  for (const ev of ['moved', 'resized', 'maximize', 'unmaximize']) win.on(ev, later);
   wc.on('did-finish-load', () => wc.setZoomLevel(prefs.zoom));
 
   // 외부 탐색·새 창 차단 (링크는 전부 IPC 로 직접 처리)
@@ -196,9 +227,7 @@ function createWindow(file) {
       else if (r === 1) { st.dirty = false; win.close(); }
       return;
     }
-    prefs.maximized = win.isMaximized();
-    if (!win.isMaximized() && !win.isMinimized() && !win.isFullScreen()) prefs.bounds = win.getBounds();
-    savePrefs();
+    rememberWindow(win);
   });
   win.on('closed', () => { st.unwatch && st.unwatch(); states.delete(wc.id); });
 
