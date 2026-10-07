@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https: http:; media-src file: https: http: data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OMMV</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="toc-visible">
+  <header id="toolbar">
+    <button id="btn-toc" class="icon" data-icon="menu" title="목차 (Ctrl+B)"></button>
+    <span class="sep"></span>
+    <button id="btn-back" class="icon" data-icon="back" title="뒤로 (Alt+←)" disabled></button>
+    <button id="btn-fwd" class="icon" data-icon="forward" title="앞으로 (Alt+→)" disabled></button>
+    <button id="doc-title" class="doc-title" title="">OMMV</button>
+    <span class="spacer"></span>
+    <div id="mode-group" class="seg" role="group" aria-label="보기 모드">
+      <button id="btn-mode-render" class="seg-btn active" title="보기 모드 (Shift+Alt+V)">보기</button>
+      <button id="btn-mode-edit" class="seg-btn" title="편집 모드 (Shift+Alt+E)">편집</button>
+    </div>
+    <button id="btn-save" class="icon" data-icon="save" title="저장 (Ctrl+S)" hidden></button>
+    <span class="sep"></span>
+    <button id="btn-find" class="icon" data-icon="search" title="찾기 (Ctrl+F)"></button>
+    <button id="btn-width" class="icon" data-icon="width" title="본문 너비"></button>
+    <button id="btn-theme" class="icon" data-icon="theme-system" title="테마"></button>
+    <button id="btn-open" class="icon" data-icon="open" title="열기 (Ctrl+O)"></button>
+  </header>
+
+  <aside id="toc"><nav id="toc-list"></nav></aside>
+
+  <div id="findbar" hidden>
+    <input id="find-input" type="text" placeholder="문서에서 찾기" spellcheck="false">
+    <span id="find-count"></span>
+    <button id="find-prev" class="icon sm" data-icon="up" title="이전 (Shift+Enter)"></button>
+    <button id="find-next" class="icon sm" data-icon="down" title="다음 (Enter)"></button>
+    <button id="find-close" class="icon sm" data-icon="close" title="닫기 (Esc)"></button>
+  </div>
+
+  <main id="content">
+    <article id="article" class="markdown-body" hidden></article>
+    <section id="empty">
+      <div class="empty-card">
+        <div class="empty-logo">M<span>↓</span></div>
+        <h1>OMMV</h1>
+        <p class="empty-name">oh-my-md-viewer</p>
+        <p class="empty-sub">Markdown 파일을 여기로 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>O</kbd></p>
+        <button id="empty-open" class="primary">파일 열기</button>
+        <div id="recent-wrap" hidden>
+          <h2>최근 파일</h2>
+          <ul id="recent-list"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="editor" hidden></div>
+  <div id="notice" hidden>
+    <span id="notice-text"></span>
+    <button id="notice-reload" class="primary sm">다시 불러오기</button>
+    <button id="notice-ignore" class="ghost sm">무시</button>
+  </div>
+  <div id="toast" hidden></div>
+
+  <div id="drop-overlay" hidden>여기에 놓으면 열려요</div>
+  <script src="renderer.js"></script>
+</body>
+</html>

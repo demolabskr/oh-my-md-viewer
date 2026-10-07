@@ -1,0 +1,19 @@
+# pnpm 9 는 packages 항목이 비어 있으면 오류가 나므로 프로젝트 루트('.')를 지정한다.
+packages:
+  - '.'
+
+# ── 아래는 pnpm 10 이상에서만 사용되는 설정 (pnpm 9 는 무시) ──
+# 설치 스크립트(postinstall)를 허용할 패키지
+allowBuilds:
+  electron: true
+  esbuild: true
+  electron-winstaller: false
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+# katex 를 한 버전으로 통일 (구버전 취약점 회피). pnpm 9 는 package.json 의 pnpm.overrides 를 사용
+overrides:
+  katex: ^0.19.0
+# 갓 배포된 버전도 설치되도록 예외 (pnpm 의 최소 릴리스 경과일 정책)
+minimumReleaseAgeExclude:
+  - electron@44.6.0

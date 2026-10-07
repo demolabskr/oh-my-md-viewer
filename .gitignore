@@ -1,0 +1,6 @@
+node_modules/
+dist/
+release/
+.pnpm-store/
+*.log
+package-lock.json
